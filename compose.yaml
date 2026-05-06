@@ -1,0 +1,81 @@
+services:
+  # =========================
+  # PostgreSQL Database
+  # =========================
+  postgres:
+    image: postgres:16-alpine
+    container_name: billnova-postgres
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: billing_manager
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - billnova-network
+
+  # =========================
+  # Spring Boot Backend API
+  # =========================
+  api:
+    build: .
+    container_name: billnova-backend
+
+    restart: unless-stopped
+
+    ports:
+      - "8081:8080"
+
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+
+      DB_URL: jdbc:postgresql://postgres:5432/billing_manager
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+    depends_on:
+      - postgres
+
+    networks:
+      - billnova-network
+
+  # =========================
+  # React Frontend
+  # =========================
+  frontend:
+    image: billnova-frontend:1.1.0
+    container_name: billnova-frontend
+
+    restart: unless-stopped
+
+    ports:
+      - "3000:80"
+
+    depends_on:
+      - api
+
+    networks:
+      - billnova-network
+
+# =========================
+# Persistent Volumes
+# =========================
+volumes:
+  postgres_data:
+
+# =========================
+# Shared Network
+# =========================
+networks:
+  billnova-network:
